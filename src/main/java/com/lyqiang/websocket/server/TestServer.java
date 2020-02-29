@@ -1,15 +1,13 @@
 package com.lyqiang.websocket.server;
 
-import com.alibaba.fastjson.JSON;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import javax.websocket.*;
 import javax.websocket.server.PathParam;
 import javax.websocket.server.ServerEndpoint;
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -18,6 +16,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 
 @Component
+@Slf4j
 @ServerEndpoint(value = "/websocketTest/{userId}")
 public class TestServer {
 
@@ -44,7 +43,7 @@ public class TestServer {
             webSocketSession.put(userId, set);
         }
         this.userId = userId;
-        System.out.println("新连接：{}" + userId + ":" + this);
+        log.info("新连接：{}, this:{}", userId, this);
     }
 
     /**
@@ -53,7 +52,7 @@ public class TestServer {
     @OnClose
     public void onClose() {
         webSocketSession.get(userId).remove(this);
-        System.out.println("连接：{} 关闭" + this.userId);
+        log.info("连接：{} 关闭", this.userId);
     }
 
     /**
@@ -61,8 +60,8 @@ public class TestServer {
      */
     @OnMessage
     public void onMessage(String message, Session session) throws IOException {
-        System.out.println("收到用户{}的消息{}" + this.userId + " - " + message + " " + this);
-        session.getBasicRemote().sendText("收到 " + this.userId + " 的消息 ");
+        log.info("收到用户 {} 的消息 {} , this: {}", this.userId, message, this);
+        session.getBasicRemote().sendText("你好，服务端已经收到 " + this.userId + " 的消息： " + message);
     }
 
     /**
@@ -70,8 +69,7 @@ public class TestServer {
      */
     @OnError
     public void onError(Session session, Throwable error) {
-        System.out.println("用户id为：{}的连接发送错误" + this.userId);
-        error.printStackTrace();
+        log.error("用户id为：{}的连接发送错误", this.userId, error);
     }
 
 
@@ -79,7 +77,6 @@ public class TestServer {
      * 发送自定义消息
      */
     public static void sendInfo(String message, String userId) {
-
         Set<TestServer> serverSet = webSocketSession.get(userId);
         if (serverSet != null && !serverSet.isEmpty()) {
             serverSet.forEach(s -> s.sendMessage(message));
@@ -90,15 +87,10 @@ public class TestServer {
      * 实现服务器主动推送
      */
     public void sendMessage(String message) {
-        Map m = new HashMap();
-        m.put("a", "123");
-        m.put("b", "577");
-        m.put("c", true);
         try {
             this.session.getBasicRemote().sendText(message);
-            this.session.getBasicRemote().sendText(JSON.toJSONString(m));
         } catch (IOException e) {
-            e.printStackTrace();
+            log.error("sendMsg error", e);
         }
     }
 }
